@@ -40,7 +40,7 @@ canvas{touch-action:none}
 body.playing,body.playing *{cursor:none!important}
 .hidden{display:none!important}
 #hud{position:fixed;inset:0;pointer-events:none;z-index:5}
-#cross{position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px 0 0 -2px;border-radius:50%;background:#fff;box-shadow:0 0 2px #000,0 0 0 1px rgba(0,0,0,.5);transition:opacity .1s}
+#cross{position:absolute;left:50%;top:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;background:#fff;box-shadow:0 0 2px rgba(0,0,0,.9),0 0 0 1.4px rgba(0,0,0,.6);transition:opacity .1s;z-index:3}
 #hitm{position:absolute;left:50%;top:50%;width:0;height:0;opacity:0}
 #hitm i{position:absolute;width:2px;height:9px;background:#fff;left:-1px;top:-4px;box-shadow:0 0 2px #000}
 #hitm i:nth-child(1){transform:rotate(45deg) translateY(-11px)}
@@ -98,7 +98,7 @@ h3{font-size:15px;letter-spacing:4px;opacity:.6;margin:20px 0 10px;font-weight:6
 <div id="cam" class="hidden"><canvas id="grain" width="480" height="270"></canvas><div id="camTxt"></div></div>
 <div id="dmg"></div>
 <div id="hud" class="hidden">
-  <div id="cross" style="display:none"></div>
+  <div id="cross"></div>
   <div id="hitm" style="display:none"><i></i><i></i><i></i><i></i></div>
   <div id="dirInd"><div></div></div>
   <div id="info" style="display:none"><div id="waveTxt">WELLE 1</div><div id="enemTxt">Gegner: 0</div><div id="killTxt">Kills: 0</div></div>
@@ -131,10 +131,6 @@ h3{font-size:15px;letter-spacing:4px;opacity:.6;margin:20px 0 10px;font-weight:6
     <div class="cards" id="wpnCards">
       <div class="card sel" data-wpn="m4"><b>M4A1</b><small>5.56 mm · 800 Schuss/min · Rotpunktvisier · wenig Rückstoß</small></div>
 
-    </div>
-    <h3>OPTIONEN</h3>
-    <div class="row">
-      <label class="toggle"><input type="checkbox" id="optLag" checked> Waffen-Trägheit (Kopf folgt der Maus 0,35 Sekunden später)</label>
     </div>
     <h3>MAP</h3>
     <div class="cards" id="mapCards">
@@ -3599,17 +3595,74 @@ function addLight(g,left,rail){const env=envMap();const b=new THREE.MeshStandard
   const tail=new THREE.Mesh(new THREE.CylinderGeometry(.009,.009,.012,12),b);tail.rotation.x=Math.PI/2;tail.position.set(x,y,z+.05);g.add(tail);}
 function buildM4(){return buildGun('m4');}
 function buildAK(){return buildGun('ak');}
+// ---- Mossberg 930 (prozedural, taktische Flinte) ----
+function buildMossberg(){
+  const env=envMap();
+  const steel=new THREE.MeshStandardMaterial({color:0x34373c,roughness:.3,metalness:.88,envMap:env,map:TEX.grunge});
+  const black=new THREE.MeshStandardMaterial({color:0x202225,roughness:.5,metalness:.55,envMap:env,map:TEX.grunge,normalMap:nrmTex(),normalScale:new THREE.Vector2(.3,.3)});
+  const poly=new THREE.MeshStandardMaterial({color:0x26282b,roughness:.72,metalness:.1,envMap:env,map:TEX.grunge,normalMap:nrmTex(),normalScale:new THREE.Vector2(.5,.5)});
+  const g=new THREE.Group();
+  const bx=(w,h,d,x,y,z,m,rx=0,ry=0,rz=0)=>{const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m||poly);o.position.set(x,y,z);o.rotation.set(rx,ry,rz);g.add(o);return o;};
+  const cy=(r1,r2,l,x,y,z,m,rx=Math.PI/2,ry=0,rz=0,seg=16)=>{const o=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,l,seg),m||steel);o.position.set(x,y,z);o.rotation.set(rx,ry,rz);g.add(o);return o;};
+  // Lauf + Mündung
+  cy(.0135,.0135,.56,0,.021,-.3,steel);
+  cy(.016,.014,.03,0,.021,-.585,black);
+  // Magazinröhre unter dem Lauf
+  cy(.012,.012,.5,0,-.004,-.28,steel);
+  cy(.0105,.0105,.02,0,-.004,-.54,black);
+  // belüfteter Hitzeschild oben
+  for(let i=0;i<6;i++){bx(.03,.004,.016,0,.04,-.5+i*.07,black);}
+  // Vorderschaft / Pumpe (Griff der linken Hand)
+  bx(.052,.05,.15,0,-.016,-.28,poly);
+  for(let i=0;i<5;i++)bx(.058,.003,.008,0,-.041+((i%2)?.003:0),-.33+i*.028,black);
+  // Gehäuse (Receiver) + Laufverriegelung
+  bx(.05,.062,.2,0,.004,.03,black);
+  bx(.044,.05,.07,0,.02,-.06,steel);
+  // Abzugsbügel + Abzug
+  const guard=new THREE.Mesh(new THREE.TorusGeometry(.022,.004,8,16,Math.PI),black);guard.rotation.set(Math.PI/2,0,0);guard.position.set(0,-.044,.085);g.add(guard);
+  bx(.006,.016,.006,0,-.03,.082,steel);
+  // Pistolengriff + Schulterstütze
+  bx(.03,.09,.04,0,-.058,.12,poly,-.35);
+  bx(.036,.055,.13,0,-.01,.21,poly);
+  bx(.03,.08,.03,0,.0,.3,poly,.12);
+  bx(.05,.1,.03,0,-.005,.335,black,.05);
+  // Visier: Ghost-Ring hinten, Korn vorn
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(.009,.0022,8,18),black);ring.position.set(0,.052,-.02);g.add(ring);
+  bx(.004,.016,.006,0,.05,-.56,black);
+  // Spannhebel / Verschluss (bewegt sich beim Schuss)
+  const bolt=bx(.01,.01,.03,.03,.016,0,steel);
+  const charge=new THREE.Group();charge.position.set(.03,.016,0);g.add(charge);
+  const kn=new THREE.Mesh(new THREE.CylinderGeometry(.006,.006,.016,10),black);kn.rotation.z=Math.PI/2;kn.position.set(.015,0,0);charge.add(kn);
+  // Auswurffenster
+  bx(.002,.02,.05,.0265,.012,-.02,new THREE.MeshStandardMaterial({color:0x060606,roughness:.9}));
+  const arms=buildArms(g,'m4');
+  const piv=V(0,-.03,.03),mb=V(0,-.052,.03),guardPos=V(-.03,-.052,-.28);
+  const mag=new THREE.Group();mag.position.copy(piv);g.add(mag);const magInner=new THREE.Group();magInner.position.copy(piv).negate();mag.add(magInner);
+  return{bolt,boltZ:0,key:'mossberg',group:g,mag,magInner,magPivot:piv,magBottom:mb,charge,chargeHome:charge.position.clone(),arms,leftHome:guardPos.clone(),
+    grip:V(0,-.08,.075),muzzle:V(0,.021,-.6),eject:V(.03,.016,-.01),catchP:V(-.03,mb.y+.028,mb.z-.005),guardPos,hip:V(.15,-.165,-.42),ads:V(0,-.062,-.2),chargeDir:V(0,0,1)};
+}
 const WEAPONS={
   m4:{name:'M4A1',rpm:800,mag:30,reserve:220,dmg:1,recoil:1,rv:.0052,rh:.0026,rbias:.0004,kickZ:.9,kickRot:1,hipS:.011,adsS:.002,reload:2.2,reloadEmpty:2.75,lp:5200,build:buildM4},
   ak:{name:'AK-47',rpm:600,mag:30,reserve:900,dmg:1.3,recoil:1.5,rv:.0085,rh:.0045,rbias:.0012,kickZ:1.25,kickRot:1.45,hipS:.014,adsS:.003,reload:2.5,reloadEmpty:3.05,lp:4100,build:buildAK},
+  mossberg:{name:'MOSSBERG 930',rpm:170,mag:8,reserve:48,dmg:.55,pellets:9,pelletSpread:.052,semi:true,recoil:2.1,rv:.011,rh:.004,rbias:.0006,kickZ:2.2,kickRot:2.2,hipS:.05,adsS:.03,reload:2.6,reloadEmpty:3.05,lp:2600,build:buildMossberg},
 };
 const W={sp:{x:V(),v:V()},sr:{x:V(),v:V()},ck:{x:V(),v:V()},aimV:new THREE.Vector2(),def:null,vm:null,ammo:30,reserve:0,auto:true,reloading:false,reloadT:0,reloadDur:0,empty:false,magDropped:false,lastShot:-9,adsT:0,kick:0,flash:null,flashT:0,swayX:0,swayY:0,heat:0};
 function equip(key){if(W.pivot)camera.remove(W.pivot);const d=WEAPONS[key];W.def=d;W.vm=d.build();
   W.flash=new THREE.Sprite(flashMat);W.flash.position.copy(W.vm.muzzle).add(V(0,0,-.07));W.flash.scale.set(.22,.22,.22);W.flash.visible=false;W.vm.group.add(W.flash);
   W.vm.group.traverse(o=>{o.layers.set(1);o.castShadow=false;o.receiveShadow=false;o.frustumCulled=false;});
-  W.pivot=new THREE.Group();W.pivot.rotation.order='YXZ';W.pivot.add(W.vm.group);camera.add(W.pivot);W.ammo=d.mag;W.reserve=d.reserve;W.reloading=false;W.auto=true;W.adsT=0;W.kick=0;}
+  W.pivot=new THREE.Group();W.pivot.rotation.order='YXZ';W.pivot.add(W.vm.group);camera.add(W.pivot);W.ammo=d.mag;W.reserve=d.reserve;W.reloading=false;W.auto=!d.semi;W.adsT=0;W.kick=0;}
+// ===== Loadout: Waffen werden aus dem Kofferraum aufgesammelt =====
+const INV={have:[],i:-1,ammo:{}};
+function invReset(){INV.have.length=0;INV.i=-1;INV.ammo={};}
+function hasWeapon(k){return INV.have.includes(k);}
+function equipFromInv(){const key=INV.have[INV.i];equip(key);G.weapon=key;const a=INV.ammo[key];if(a){W.ammo=a.ammo;W.reserve=a.reserve;}W.holstered=false;W.drawT=0;W.drawFromRight=false;W.oneHand=0;W.pivot.visible=true;}
+function saveCurAmmo(){if(INV.i>=0)INV.ammo[INV.have[INV.i]]={ammo:W.ammo,reserve:W.reserve};}
+function giveWeapon(key){if(hasWeapon(key))return false;INV.ammo[key]={ammo:WEAPONS[key].mag,reserve:WEAPONS[key].reserve};INV.have.push(key);
+  if(INV.i<0){INV.i=INV.have.length-1;equipFromInv();}updateLoadoutHud();return true;}
+function switchWeapon(dir){if(INV.have.length<2||W.holstered||G.cut||!player.alive)return;saveCurAmmo();INV.i=(INV.i+dir+INV.have.length)%INV.have.length;equipFromInv();sndClick(2600,.25,.03);setTimeout(()=>sndClick(1400,.25,.03),80);showMsg(W.def.name,1);updateLoadoutHud();}
+function updateLoadoutHud(){const el=$('loadout');if(!el)return;el.innerHTML=INV.have.map((k,n)=>`<span class="${n===INV.i?'on':''}">${WEAPONS[k].name}${n===INV.i?'':' · Rücken'}</span>`).join('');}
 
-function startReload(){if(W.reloading||W.reserve<=0||W.ammo>=W.def.mag)return;if(W.ammo>0)W.boltLocked=false;W.reloading=true;W.reloadT=0;W.empty=W.ammo===0;
+function startReload(){if(W.holstered||W.reloading||W.reserve<=0||W.ammo>=W.def.mag)return;if(W.ammo>0)W.boltLocked=false;W.reloading=true;W.reloadT=0;W.empty=W.ammo===0;
   W.anim=RELOADS[W.vm.key][W.empty?'empty':'tac'];W.reloadDur=W.anim.dur;W.fired={};playBuf('handle_b',{vol:.35});}
 // ---- Nachlade-Zeitlinien (Sekunden). pose: Waffen-Haltung, hand: Ziel der linken Hand, mag: Zustand des Magazins, ev: Geräusche/Ereignisse
 const PM4=[-.09,.085,.11,.32,.2,-.55],PAK=[-.08,.08,.1,.3,.18,-.45],PAK2=[-.05,.06,.08,.18,-.2,.35],Z6=[0,0,0,0,0,0];
@@ -3630,7 +3683,16 @@ const RELOADS={
     tac:{dur:2.45,pose:[[0,Z6],[.3,PAK],[1.56,PAK],[2.2,Z6,1],[2.45,Z6]],look:[[0,0],[.3,-.15],[1.6,-.15],[2.05,0]],
       hand:[[0,'guard'],[.08,'guard'],[.3,'grab'],[.34,'grab'],[.48,'grab'],[.6,'free'],[.88,'pouch'],[1,'pouch'],[1.3,'below'],[1.4,'hook'],[1.52,'well'],[1.56,'well'],[1.95,'guard']],
       mag:[[0,'gun',0,0],[.34,'gun',0,0],[.48,'gun',0,.45],[.49,'hand',0,.45],[.88,'gone'],[1,'hand',0,.4],[1.4,'gun',0,.4],[1.52,'gun',0,0]],
-      ev:[[.34,'click_b',.7],[.42,'mag_out',.9],[.94,'RUSTLE'],[1.5,'mag_in',1,'JOLT'],[1.9,'handle_b',.35]]}}};
+      ev:[[.34,'click_b',.7],[.42,'mag_out',.9],[.94,'RUSTLE'],[1.5,'mag_in',1,'JOLT'],[1.9,'handle_b',.35]]}},
+  mossberg:(function(){const PS=[.03,0,.04,.08,-.12,.5],PSB=[.02,.03,.03,.05,-.05,.3];return{
+    tac:{dur:2.55,pose:[[0,Z6],[.25,PS],[2.25,PS],[2.5,Z6]],look:[[0,0],[.25,-.12],[2.25,-.12],[2.45,0]],
+      hand:[[0,'guard'],[.1,'guard'],[.4,'pouch'],[.6,'well'],[.76,'tap'],[.9,'pouch'],[1.1,'well'],[1.26,'tap'],[1.4,'pouch'],[1.6,'well'],[1.76,'tap'],[2.05,'guard']],
+      mag:[[0,'gun',0,0]],
+      ev:[[.5,'RUSTLE'],[.7,'mag_in',.6],[.78,'mag_tap',.5,'JOLT'],[1.04,'mag_in',.6],[1.2,'mag_tap',.5,'JOLT'],[1.54,'mag_in',.6],[1.7,'mag_tap',.5,'JOLT'],[2.2,'handle_b',.4]]},
+    empty:{dur:3.0,pose:[[0,Z6],[.25,PS],[2.55,PS],[2.7,PSB],[2.9,PSB],[2.98,Z6]],look:[[0,0],[.25,-.12],[2.55,-.12],[2.8,0]],
+      hand:[[0,'guard'],[.1,'guard'],[.4,'pouch'],[.6,'well'],[.76,'tap'],[.9,'pouch'],[1.1,'well'],[1.26,'tap'],[1.4,'pouch'],[1.6,'well'],[1.76,'tap'],[1.9,'pouch'],[2.1,'well'],[2.26,'tap'],[2.55,'charge'],[2.72,'chargeBack'],[2.9,'guard']],
+      mag:[[0,'gun',0,0]],charge:[[0,0],[2.5,0],[2.66,.06],[2.76,0]],
+      ev:[[.5,'RUSTLE'],[.7,'mag_in',.6],[.78,'mag_tap',.5,'JOLT'],[1.04,'mag_in',.6],[1.2,'mag_tap',.5,'JOLT'],[1.54,'mag_in',.6],[1.7,'mag_tap',.5,'JOLT'],[2.04,'mag_in',.6],[2.2,'mag_tap',.5,'JOLT'],[2.66,'charge_fwd',1,'JOLT'],[2.86,'handle_a',.35]]}};})()};
 function easeOutBack(t){const c1=1.5,c3=c1+1;return 1+c3*Math.pow(t-1,3)+c1*Math.pow(t-1,2);}
 function trackVal(tr,t){if(t<=tr[0][0])return tr[0][1];for(let i=1;i<tr.length;i++){if(t<=tr[i][0]){const a=tr[i-1],b=tr[i];let k=(t-a[0])/(b[0]-a[0]);k=b[2]?easeOutBack(k):ease(k);
   if(Array.isArray(a[1]))return a[1].map((v,j)=>lerp(v,b[1][j],k));return lerp(a[1],b[1],k);}}return tr[tr.length-1][1];}
@@ -3741,7 +3803,7 @@ function updateWeapon(dt){
   const vm=W.vm;if(!vm)return;const d=W.def;
   const canAds=adsHeld&&!W.reloading&&!player.sprinting&&player.alive;
   W.adsT=clamp(W.adsT+(canAds?dt*7:-dt*7),0,1);const at=ease(W.adsT);
-  if(mouseDown&&player.alive&&!player.sprinting&&!W.reloading&&!G.cut&&W.refillT==null){const iv=60/d.rpm;
+  if(mouseDown&&player.alive&&!player.sprinting&&!W.reloading&&!G.cut&&!W.holstered&&W.refillT==null){const iv=60/d.rpm;
     if(W.ammo>0){if((W.auto||triggerFresh)&&time-W.lastShot>=iv){fireWeapon();triggerFresh=false;}}
     else if(triggerFresh){sndClick(2500,.2,.02);triggerFresh=false;startReload();}}
   if(!mouseDown)W.heat=Math.max(0,W.heat-dt*8);
@@ -3805,7 +3867,8 @@ function updateWeapon(dt){
   else{W.pivot.quaternion.setFromEuler(_lagE);W.pivot.position.set(0,0,0);}
   camera.updateMatrixWorld();_v1.set(0,0,-30).applyQuaternion(aimQuat()).add(player.eyeW||camera.getWorldPosition(_v2)).project(camera);
   const fm=fisheyeMap(_v1.x,_v1.y);const cx=(fm[0]+1)/2*innerWidth,cyy=(1-fm[1])/2*innerHeight;const cs=$('cross').style;cs.left=cx+'px';cs.top=cyy+'px';const hs2=$('hitm').style;hs2.left=cx+'px';hs2.top=cyy+'px';
-  cs.opacity=((at>.5&&!G.gopro)||player.sprinting||W.reloading)?0:1;
+  cs.opacity=(W.holstered||(at>.5&&!G.gopro)||player.sprinting||W.reloading)?0:1;
+  if(W.pivot&&!G.cut)W.pivot.visible=!W.holstered;
 }
 
 const _aimE=new THREE.Euler(0,0,0,'YXZ'),_aimQ=new THREE.Quaternion();
@@ -3833,16 +3896,7 @@ function fisheyeMap(nx,ny){if(!G.gopro||!post)return[nx,ny];const asp=post.mat.u
   let rd=rs;for(let i=0;i<6;i++){const f=sc*(rd+k*rd*rd*rd)-rs,fp=sc*(1+3*k*rd*rd);rd-=f/fp;}
   return[sx*rd/rs/(.5*asp),sy*rd/rs/.5];}
 function aimQuat(){_aimE.set(player.pitch,player.yaw,0);return _aimQ.setFromEuler(_aimE);}
-function updateHeadLag(dt){const p=player;
-  // Waffe = aktuelle Maus-Ausrichtung. Kopf = Ausrichtung von vor LAG_T Sekunden (linear interpoliert).
-  if(!G.lag){p.camYaw=p.yaw;p.camPitch=p.pitch;return;}
-  const LAG_T=0.35;
-  const H=W.hist||(W.hist=[]);H.push({t:time,y:p.yaw,p:p.pitch});
-  const tt=time-LAG_T;
-  while(H.length>2&&H[1].t<=tt)H.shift();
-  const a=H[0],b=H[1]||a;
-  if(b===a||a.t>=tt){p.camYaw=a.y;p.camPitch=a.p;}
-  else{const k=(tt-a.t)/(b.t-a.t);p.camYaw=a.y+(b.y-a.y)*k;p.camPitch=a.p+(b.p-a.p)*k;}}
+function updateHeadLag(dt){const p=player;p.camYaw=p.yaw;p.camPitch=p.pitch;}
 function updatePlayer(dt){
   const p=player;
   if(!p.alive){p.deathT+=dt;const k=ease(Math.min(1,p.deathT/1.1));camera.position.set(p.pos.x,p.pos.y+lerp(p.eye,.25,k),p.pos.z);camera.rotation.set(lerp(p.camPitch,-.3,k),p.camYaw,lerp(0,1.2,k));return;}
@@ -3895,11 +3949,16 @@ const grainCtx=$('grain').getContext('2d');const grainImg=grainCtx.createImageDa
 function updateHUD(dt){
   hitmT-=dt;$('hitm').style.opacity=hitmT>0?1:0;feedT-=dt;$('feed').style.opacity=clamp(feedT*2,0,1);msgT-=dt;$('msg').style.opacity=msgT>0?1:0;
   dirIndT-=dt;$('dirInd').style.opacity=clamp(dirIndT,0,1);
-  $('ammoNum').innerHTML=`${W.ammo}<span>/ ${W.reserve}</span>`;$('ammoNum').style.color=W.ammo<=5?'#ff6a55':'';
-  $('wName').textContent=`${W.def.name} · ${W.auto?'AUTO':'EINZEL'}`;
+  if(W.holstered){$('ammoNum').innerHTML=`—<span></span>`;$('ammoNum').style.color='';$('wName').textContent='UNBEWAFFNET';}
+  else{$('ammoNum').innerHTML=`${W.ammo}<span>/ ${W.reserve}</span>`;$('ammoNum').style.color=W.ammo<=5?'#ff6a55':'';
+  $('wName').textContent=`${W.def.name} · ${W.auto?'AUTO':'EINZEL'}`;}
   $('hpNum').textContent=Math.ceil(player.health);$('hpFill').style.width=player.health+'%';$('hpFill').style.background=player.health<35?'#ff4a3a':'#e8e6df';
   const host=enemies.filter(e=>e.isHostile()).length;$('enemTxt').textContent=G.sandbox?`NPCs: ${enemies.length}  ·  am Boden: ${enemies.filter(e=>e.rag).length}`:`Gegner: ${host}`;$('killTxt').textContent=G.sandbox?`Treffer: ${G.hits}  ·  Kopftreffer: ${G.heads}`:`Kills: ${G.kills}  ·  Kopfschüsse: ${G.heads}`;$('waveTxt').textContent=G.sandbox?(G.slow?'TESTGELÄNDE · ZEITLUPE':'TESTGELÄNDE'):`WELLE ${G.wave}`;
-  $('hint').textContent=W.reloading?'':(W.ammo===0&&W.reserve===0?'KEINE MUNITION':'');if(nearTrunk()&&W.refillT==null)$('hint').textContent=(IS_TOUCH?'':'F – ')+(TRK.target>.5?'KOFFERRAUM SCHLIESSEN':'KOFFERRAUM ÖFFNEN · MUNITION');
+  $('hint').textContent=W.reloading?'':(W.holstered?'WAFFEN AUS DEM KOFFERRAUM HOLEN':(W.ammo===0&&W.reserve===0?'KEINE MUNITION':''));
+  if(nearTrunk()&&W.refillT==null){const pre=IS_TOUCH?'':'F – ';let t;
+    if(TRK.target<.5)t=pre+'KOFFERRAUM ÖFFNEN';
+    else{const tg=(CARGO&&CARGO.trunkGuns)?CARGO.trunkGuns.find(x=>!x.taken):null;t=tg?pre+WEAPONS[tg.key].name+' AUFNEHMEN':pre+'KOFFERRAUM SCHLIESSEN'+(W.holstered?'':' · MUNITION');}
+    $('hint').textContent=t;}
   $('dmg').style.opacity=clamp(dmgFlash*.8+(player.health<40?(1-player.health/40)*.55:0),0,1);
   if(G.bodycam&&(grainF++%2===0)){const d=grainImg.data;for(let i=0;i<d.length;i+=4){const v=Math.random()*255;d[i]=d[i+1]=d[i+2]=v;d[i+3]=255;}grainCtx.putImageData(grainImg,0,0);
     const n=new Date();const pad=x=>String(x).padStart(2,'0');$('camTxt').innerHTML=`<b>● REC</b> &nbsp;CAM-07<br>${n.getFullYear()}-${pad(n.getMonth()+1)}-${pad(n.getDate())} ${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;}
@@ -4201,7 +4260,7 @@ document.addEventListener('pointerlockerror',()=>{G.noLock=true;});
 function cardGroup(id,attr,cb){const box=$(id);box.addEventListener('click',e=>{const c=e.target.closest('.card');if(!c)return;box.querySelectorAll('.card').forEach(x=>x.classList.remove('sel'));c.classList.add('sel');cb(c.dataset[attr]);});}
 cardGroup('wpnCards','wpn',v=>G.weapon='m4');
 cardGroup('mapCards','map',v=>G.map=v);
-$('startBtn').onclick=()=>{G.bodycam=false;G.lag=$('optLag').checked;G.gopro=true;setupPost();startGame();};
+$('startBtn').onclick=()=>{G.bodycam=false;G.lag=false;G.gopro=true;setupPost();startGame();};
 $('resumeBtn').onclick=()=>{G.paused=false;$('pause').classList.add('hidden');lockPointer();};
 $('retryBtn').onclick=()=>startGame();$('menuBtn').onclick=toMenu;$('menuBtn2').onclick=toMenu;
 
